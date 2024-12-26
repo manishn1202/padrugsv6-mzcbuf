@@ -1,0 +1,173 @@
+/**
+ * Core Animation and Transition Styles
+ * Defines reusable animations and transitions for the Prior Authorization Management System
+ * Version: 1.0.0
+ */
+
+/* Import animation-related custom properties */
+@import './variables.css';
+
+/* Fade Animations
+----------------------------------------*/
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    will-change: opacity;
+  }
+  to {
+    opacity: 1;
+    will-change: auto;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    will-change: opacity;
+  }
+  to {
+    opacity: 0;
+    will-change: auto;
+  }
+}
+
+/* Slide Animations
+----------------------------------------*/
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    will-change: transform;
+  }
+  to {
+    transform: translateX(0);
+    will-change: auto;
+  }
+}
+
+@keyframes slide-out {
+  from {
+    transform: translateX(0);
+    will-change: transform;
+  }
+  to {
+    transform: translateX(100%);
+    will-change: auto;
+  }
+}
+
+/* Spinner Animation
+----------------------------------------*/
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+    will-change: transform;
+  }
+  to {
+    transform: rotate(360deg);
+    will-change: auto;
+  }
+}
+
+/* Transition Classes
+----------------------------------------*/
+.transition-default {
+  transition: all var(--transition-duration-base) var(--transition-timing);
+}
+
+.transition-fast {
+  transition: all var(--transition-duration-fast) var(--transition-timing);
+}
+
+.transition-slow {
+  transition: all var(--transition-duration-slow) var(--transition-timing);
+}
+
+/* Performance-optimized transitions */
+.transition-transform {
+  transition: transform var(--transition-duration-base) var(--transition-timing);
+}
+
+.transition-opacity {
+  transition: opacity var(--transition-duration-base) var(--transition-timing);
+}
+
+/* Animation Utility Classes
+----------------------------------------*/
+.fade-in {
+  animation: fade-in var(--transition-duration-base) var(--transition-timing) forwards;
+}
+
+.fade-out {
+  animation: fade-out var(--transition-duration-base) var(--transition-timing) forwards;
+}
+
+.slide-in {
+  animation: slide-in var(--transition-duration-base) var(--transition-timing) forwards;
+}
+
+.slide-out {
+  animation: slide-out var(--transition-duration-base) var(--transition-timing) forwards;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+/* Interactive State Transitions
+----------------------------------------*/
+.hover-elevate {
+  transition: transform var(--transition-duration-fast) var(--transition-timing),
+              box-shadow var(--transition-duration-fast) var(--transition-timing);
+}
+
+.hover-elevate:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.active-scale {
+  transition: transform var(--transition-duration-fast) var(--transition-timing);
+}
+
+.active-scale:active {
+  transform: scale(0.98);
+}
+
+/* Accessibility - Reduced Motion
+----------------------------------------*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .loading-spinner {
+    animation: none !important;
+  }
+
+  .hover-elevate:hover {
+    transform: none !important;
+  }
+
+  .active-scale:active {
+    transform: none !important;
+  }
+}
+
+/* Animation Groups
+----------------------------------------*/
+.animate-group > * {
+  opacity: 0;
+  animation: fade-in var(--transition-duration-base) var(--transition-timing) forwards;
+}
+
+.animate-group > *:nth-child(1) { animation-delay: 0ms; }
+.animate-group > *:nth-child(2) { animation-delay: 100ms; }
+.animate-group > *:nth-child(3) { animation-delay: 200ms; }
+.animate-group > *:nth-child(4) { animation-delay: 300ms; }
+.animate-group > *:nth-child(5) { animation-delay: 400ms; }
