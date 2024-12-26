@@ -1,0 +1,194 @@
+/**
+ * Core Layout Styles
+ * Implements responsive grid-based layouts for the Prior Authorization Management System
+ * Version: 1.0.0
+ */
+
+@import '../styles/variables.css';
+
+/* Base Layout Container
+----------------------------------------*/
+.layout {
+  display: grid;
+  grid-template-areas: 
+    'header header'
+    'nav main'
+    'footer footer';
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--header-height) 1fr auto;
+  min-height: 100vh;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Collapsed Navigation State
+----------------------------------------*/
+.layout--nav-collapsed {
+  grid-template-columns: 80px 1fr;
+  transition: grid-template-columns var(--transition-duration-base) var(--transition-timing);
+}
+
+/* Header Component
+----------------------------------------*/
+.layout__header {
+  grid-area: header;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-index-fixed);
+  width: 100%;
+  height: var(--header-height);
+  background: var(--color-background-alt);
+  border-bottom: var(--border-width-base) solid var(--color-border);
+  padding: 0 var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: transform var(--transition-duration-base) var(--transition-timing);
+}
+
+/* Navigation Component
+----------------------------------------*/
+.layout__nav {
+  grid-area: nav;
+  position: sticky;
+  top: var(--header-height);
+  height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  scrollbar-width: thin;
+  background: var(--color-background-alt);
+  border-right: var(--border-width-base) solid var(--color-border);
+  padding: var(--spacing-md) 0;
+  transition: transform var(--transition-duration-base) var(--transition-timing),
+              width var(--transition-duration-base) var(--transition-timing);
+}
+
+/* Main Content Area
+----------------------------------------*/
+.layout__main {
+  grid-area: main;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+  min-height: calc(100vh - var(--header-height));
+  background: var(--color-background);
+  transition: padding var(--transition-duration-base) var(--transition-timing);
+}
+
+/* Footer Component
+----------------------------------------*/
+.layout__footer {
+  grid-area: footer;
+  padding: var(--spacing-md);
+  background: var(--color-background-alt);
+  border-top: var(--border-width-base) solid var(--color-border);
+}
+
+/* Mobile Layout (<576px)
+----------------------------------------*/
+@media (max-width: 576px) {
+  .layout {
+    grid-template-areas:
+      'header'
+      'main'
+      'footer';
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--header-height) 1fr auto;
+  }
+
+  .layout__nav {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    width: 100%;
+    height: calc(100vh - var(--header-height));
+    transform: translateX(-100%);
+    z-index: var(--z-index-fixed);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .layout__nav--visible {
+    transform: translateX(0);
+  }
+
+  .layout__main {
+    padding: var(--spacing-md);
+  }
+}
+
+/* Tablet Layout (577px - 992px)
+----------------------------------------*/
+@media (min-width: 577px) and (max-width: 992px) {
+  .layout {
+    grid-template-columns: 80px 1fr;
+  }
+
+  .layout__nav {
+    width: 80px;
+    overflow-x: hidden;
+  }
+
+  .layout__main {
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+}
+
+/* Desktop Layout (>992px)
+----------------------------------------*/
+@media (min-width: 993px) {
+  .layout {
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  .layout__nav {
+    width: var(--sidebar-width);
+  }
+}
+
+/* Print Layout
+----------------------------------------*/
+@media print {
+  .layout {
+    display: block;
+    max-width: none;
+  }
+
+  .layout__nav {
+    display: none;
+  }
+
+  .layout__header {
+    position: static;
+  }
+
+  .layout__main {
+    overflow: visible;
+    padding: 0;
+  }
+
+  .layout__footer {
+    display: none;
+  }
+}
+
+/* Utility Classes for Layout Adjustments
+----------------------------------------*/
+.layout__main--full-width {
+  padding: 0;
+}
+
+.layout__main--with-tabs {
+  padding-top: 0;
+}
+
+/* Accessibility Enhancements
+----------------------------------------*/
+@media (prefers-reduced-motion: reduce) {
+  .layout,
+  .layout--nav-collapsed,
+  .layout__header,
+  .layout__nav,
+  .layout__main {
+    transition: none;
+  }
+}
