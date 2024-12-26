@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="240" height="32" viewBox="0 0 240 32" preserveAspectRatio="xMidYMid meet" 
+     xmlns="http://www.w3.org/2000/svg"
+     role="img"
+     aria-labelledby="logo-title logo-desc"
+     style="min-width: 24px; max-width: 320px;">
+    
+    <!-- Accessibility Labels -->
+    <title id="logo-title">PA Management System</title>
+    <desc id="logo-desc">Logo representing the Prior Authorization Management System</desc>
+    
+    <!-- CSS Variables for Theming -->
+    <style>
+        :root {
+            --logo-primary: var(--theme-primary, #0066CC);
+            --logo-secondary: var(--theme-secondary, #00A3E0);
+        }
+        @media (prefers-color-scheme: dark) {
+            .logo-text { fill: #ffffff; }
+        }
+        @media (prefers-contrast: high) {
+            .logo-icon { stroke-width: 2; }
+        }
+        @media screen and (max-width: 576px) {
+            svg { height: 32px; }
+        }
+        @media screen and (min-width: 577px) and (max-width: 992px) {
+            svg { height: 40px; }
+        }
+        @media screen and (min-width: 993px) {
+            svg { height: 48px; }
+        }
+    </style>
+
+    <!-- Icon Group -->
+    <g class="logo-icon" transform="translate(8,4)">
+        <!-- Stylized PA Symbol -->
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0z"
+              fill="var(--logo-primary)"
+              stroke="none"/>
+        
+        <path d="M8 6h8v4h-4v12h-4V6z"
+              fill="white"
+              stroke="none"/>
+              
+        <path d="M16 6h4v16h-4V6z"
+              fill="var(--logo-secondary)"
+              stroke="none"/>
+    </g>
+
+    <!-- Text Group -->
+    <g class="logo-text" transform="translate(48,8)">
+        <!-- PA Management Text -->
+        <text x="0" y="16" 
+              font-family="Inter, -apple-system, system-ui, sans-serif"
+              font-size="16"
+              font-weight="600"
+              fill="currentColor"
+              letter-spacing="-0.02em">
+            PA Management
+        </text>
+    </g>
+
+    <!-- System Text -->
+    <g class="logo-text-secondary" transform="translate(48,24)">
+        <text x="0" y="0"
+              font-family="Inter, -apple-system, system-ui, sans-serif"
+              font-size="12"
+              font-weight="400"
+              fill="var(--logo-secondary)"
+              letter-spacing="0.01em">
+            System
+        </text>
+    </g>
+
+    <!-- Fallback PNG Support -->
+    <switch>
+        <foreignObject requiredExtensions="http://www.w3.org/1999/xhtml">
+            <img src="logo-fallback.png" 
+                 alt="Prior Authorization Management System Logo"
+                 width="240" height="32"/>
+        </foreignObject>
+    </switch>
+
+    <!-- Metadata -->
+    <metadata>
+        <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                 xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <rdf:Description>
+                <dc:title>PA Management System Logo</dc:title>
+                <dc:creator>PA Management System Design Team</dc:creator>
+                <dc:date>2024-01-01</dc:date>
+                <dc:format>image/svg+xml</dc:format>
+                <dc:rights>Proprietary</dc:rights>
+                <dc:version>1.0.0</dc:version>
+            </rdf:Description>
+        </rdf:RDF>
+    </metadata>
+</svg>
