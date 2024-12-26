@@ -1,0 +1,222 @@
+/**
+ * Utility CSS Classes
+ * Version: 1.0.0
+ * 
+ * Implements atomic design principles with HIPAA-compliant UI requirements
+ * Dependencies: variables.css (v1.0.0)
+ */
+
+@import './variables.css';
+
+/* Spacing Utilities
+----------------------------------------*/
+/* Margin */
+.m-0 { margin: 0; }
+.m-1 { margin: var(--spacing-xs); }
+.m-2 { margin: var(--spacing-sm); }
+.m-3 { margin: var(--spacing-md); }
+.m-4 { margin: var(--spacing-lg); }
+.m-5 { margin: var(--spacing-xl); }
+
+/* Padding */
+.p-0 { padding: 0; }
+.p-1 { padding: var(--spacing-xs); }
+.p-2 { padding: var(--spacing-sm); }
+.p-3 { padding: var(--spacing-md); }
+.p-4 { padding: var(--spacing-lg); }
+.p-5 { padding: var(--spacing-xl); }
+
+/* Directional Margins */
+.mt-0 { margin-top: 0; }
+.mr-0 { margin-right: 0; }
+.mb-0 { margin-bottom: 0; }
+.ml-0 { margin-left: 0; }
+
+/* Generate directional margins for sizes 1-5 */
+@each $size in (1, 2, 3, 4, 5) {
+  .mt-$(size) { margin-top: var(--spacing-$(size)); }
+  .mr-$(size) { margin-right: var(--spacing-$(size)); }
+  .mb-$(size) { margin-bottom: var(--spacing-$(size)); }
+  .ml-$(size) { margin-left: var(--spacing-$(size)); }
+}
+
+/* Layout Utilities
+----------------------------------------*/
+.container {
+  width: 100%;
+  max-width: var(--breakpoint-lg);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--spacing-md);
+}
+
+/* Grid columns */
+@for $i from 1 through 12 {
+  .col-$(i) {
+    grid-column: span $(i);
+  }
+}
+
+/* HIPAA-Compliant Display Utilities
+----------------------------------------*/
+/* PHI (Protected Health Information) Protection */
+.phi-mask {
+  filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.phi-hidden {
+  display: none !important;
+}
+
+.phi-authorized {
+  border: var(--border-width-thick) solid var(--color-success);
+  padding: var(--spacing-xs);
+  background-color: rgba(40, 167, 69, 0.05);
+}
+
+.phi-warning {
+  border: var(--border-width-thick) solid var(--color-warning);
+  padding: var(--spacing-xs);
+  background-color: rgba(255, 193, 7, 0.05);
+}
+
+/* Data Security Visualization */
+.data-encrypted {
+  position: relative;
+  background-image: linear-gradient(45deg, 
+    rgba(0, 102, 204, 0.05) 25%, 
+    transparent 25%, 
+    transparent 50%, 
+    rgba(0, 102, 204, 0.05) 50%, 
+    rgba(0, 102, 204, 0.05) 75%, 
+    transparent 75%, 
+    transparent
+  );
+  background-size: 4px 4px;
+}
+
+/* Accessibility Utilities
+----------------------------------------*/
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.focus-visible {
+  outline: var(--border-width-thick) solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Interactive Element Utilities
+----------------------------------------*/
+.clickable {
+  cursor: pointer;
+}
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.loading {
+  cursor: wait;
+  position: relative;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Animation Utilities
+----------------------------------------*/
+.transition-all {
+  transition: all var(--transition-duration-base) var(--transition-timing);
+}
+
+.animate-fade {
+  animation: fade var(--transition-duration-base) var(--transition-timing);
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slide {
+  animation: slide var(--transition-duration-base) var(--transition-timing);
+}
+
+@keyframes slide {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive Utilities
+----------------------------------------*/
+@media (min-width: var(--breakpoint-sm)) {
+  .sm\:hidden { display: none; }
+  .sm\:block { display: block; }
+  .sm\:flex { display: flex; }
+  .sm\:grid { display: grid; }
+}
+
+@media (min-width: var(--breakpoint-md)) {
+  .md\:hidden { display: none; }
+  .md\:block { display: block; }
+  .md\:flex { display: flex; }
+  .md\:grid { display: grid; }
+}
+
+@media (min-width: var(--breakpoint-lg)) {
+  .lg\:hidden { display: none; }
+  .lg\:block { display: block; }
+  .lg\:flex { display: flex; }
+  .lg\:grid { display: grid; }
+}
+
+/* ARIA Live Region Utilities
+----------------------------------------*/
+.announce-polite {
+  aria-live: polite;
+}
+
+.announce-assertive {
+  aria-live: assertive;
+}
+
+/* Status Indicator Utilities
+----------------------------------------*/
+.status-success {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.status-warning {
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+
+.status-error {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
