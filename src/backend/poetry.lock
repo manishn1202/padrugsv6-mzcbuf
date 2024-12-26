@@ -1,0 +1,220 @@
+[[package]]
+name = "fastapi"
+version = "0.100.0"
+description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "fastapi-0.100.0-py3-none-any.whl", hash = "sha256:271662daf986da8fa98dc2b7c7f61c4abdfdccfb4786d79ed8b2878f172c6d5f"},
+    {file = "fastapi-0.100.0.tar.gz", hash = "sha256:acb5f941ea8215663283c10018323ba7ea737c571b67fc7e88e9469c7eb1d12e"}
+]
+
+[package.dependencies]
+pydantic = ">=2.0.0"
+starlette = ">=0.27.0"
+typing-extensions = ">=4.5.0"
+
+[[package]]
+name = "pydantic"
+version = "2.0.0"
+description = "Data validation using Python type hints"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pydantic-2.0.0-py3-none-any.whl", hash = "sha256:b3ef57c62535b0941697cce638c08900d87fcb67e29cfa99e8a68f747f393f7c"},
+    {file = "pydantic-2.0.0.tar.gz", hash = "sha256:9e0677f943781b9f3focusing-on-health-data-validation"}
+]
+
+[package.dependencies]
+typing-extensions = ">=4.5.0"
+annotated-types = ">=0.4.0"
+
+[[package]]
+name = "sqlalchemy"
+version = "2.0.0"
+description = "Database Abstraction Library"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "SQLAlchemy-2.0.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:healthcare-data-persistence-with-security"}
+]
+
+[package.dependencies]
+typing-extensions = ">=4.2.0"
+greenlet = ">=2.0.0"
+
+[[package]]
+name = "fhir.resources"
+version = "6.5.0"
+description = "FHIR Resources as Python Classes"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "fhir.resources-6.5.0-py3-none-any.whl", hash = "sha256:fhir-standard-healthcare-models"}
+]
+
+[package.dependencies]
+pydantic = ">=2.0.0"
+
+[[package]]
+name = "anthropic"
+version = "0.3.0"
+description = "Official Python bindings for the Anthropic API"
+category = "main"
+optional = false
+python-versions = ">=3.7.1"
+files = [
+    {file = "anthropic-0.3.0-py3-none-any.whl", hash = "sha256:claude-ai-integration"}
+]
+
+[package.dependencies]
+httpx = ">=0.23.0"
+pydantic = ">=2.0.0"
+
+[[package]]
+name = "langchain"
+version = "0.1.0"
+description = "Building applications with LLMs through composability"
+category = "main"
+optional = false
+python-versions = ">=3.8.1"
+files = [
+    {file = "langchain-0.1.0-py3-none-any.whl", hash = "sha256:ai-framework-for-healthcare"}
+]
+
+[package.dependencies]
+pydantic = ">=2.0.0"
+requests = ">=2.31.0"
+
+[[package]]
+name = "celery"
+version = "5.3.0"
+description = "Distributed Task Queue"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "celery-5.3.0-py3-none-any.whl", hash = "sha256:async-task-processing"}
+]
+
+[package.dependencies]
+billiard = ">=4.1.0"
+kombu = ">=5.3.0"
+
+[[package]]
+name = "redis"
+version = "4.6.0"
+description = "Python client for Redis database and key-value store"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "redis-4.6.0-py3-none-any.whl", hash = "sha256:secure-caching-solution"}
+]
+
+[[package]]
+name = "boto3"
+version = "1.28.0"
+description = "The AWS SDK for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "boto3-1.28.0-py3-none-any.whl", hash = "sha256:aws-hipaa-eligible-services"}
+]
+
+[package.dependencies]
+botocore = ">=1.31.0"
+s3transfer = ">=0.6.0"
+
+[[package]]
+name = "aws-xray-sdk"
+version = "2.12.0"
+description = "AWS X-Ray SDK for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "aws-xray-sdk-2.12.0-py3-none-any.whl", hash = "sha256:distributed-tracing"}
+]
+
+[package.dependencies]
+botocore = ">=1.11.3"
+wrapt = ">=1.11.0"
+
+# Development Dependencies
+
+[[package]]
+name = "pytest"
+version = "7.4.0"
+description = "pytest: simple powerful testing with Python"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pytest-7.4.0-py3-none-any.whl", hash = "sha256:testing-framework"}
+]
+
+[[package]]
+name = "black"
+version = "23.7.0"
+description = "The uncompromising code formatter"
+category = "dev"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "black-23.7.0-py3-none-any.whl", hash = "sha256:code-formatting"}
+]
+
+[[package]]
+name = "isort"
+version = "5.12.0"
+description = "A Python utility / library to sort Python imports"
+category = "dev"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "isort-5.12.0-py3-none-any.whl", hash = "sha256:import-sorting"}
+]
+
+[[package]]
+name = "flake8"
+version = "6.1.0"
+description = "the modular source code checker: pep8 pyflakes and co"
+category = "dev"
+optional = false
+python-versions = ">=3.8.1"
+files = [
+    {file = "flake8-6.1.0-py3-none-any.whl", hash = "sha256:code-quality"}
+]
+
+[[package]]
+name = "mypy"
+version = "1.4.0"
+description = "Optional static typing for Python"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "mypy-1.4.0-py3-none-any.whl", hash = "sha256:type-checking"}
+]
+
+[[package]]
+name = "bandit"
+version = "1.7.5"
+description = "Security oriented static analyser for python code"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "bandit-1.7.5-py3-none-any.whl", hash = "sha256:security-analysis"}
+]
+
+[metadata]
+lock-version = "2.0"
+python-versions = "^3.11"
+content-hash = "sha256:reproducible-build-hash"
