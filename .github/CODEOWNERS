@@ -1,0 +1,70 @@
+# This file defines code ownership and required reviewers for different components
+# Format: pattern @owner1 @owner2
+
+# Global ownership - Project leads are the default owners for unspecified paths
+* @project-leads
+
+# Backend Services and API Components
+# Requires both backend and security team review for HIPAA compliance
+src/backend/** @backend-team @security-team
+
+# AI/ML Components including Claude Integration
+# Requires AI expertise and security review
+src/backend/src/ai/** @ai-team @security-team
+
+# Frontend Application and UI Components
+# Requires frontend and security team review for HIPAA compliance
+src/web/** @frontend-team @security-team
+
+# Infrastructure and Deployment Configuration
+# Requires DevOps and security team review
+infrastructure/** @devops-team @security-team
+
+# CI/CD Pipeline Configuration
+# Owned by DevOps team
+.github/workflows/** @devops-team
+
+# Core Security Implementation
+# Strictly owned by security team for HIPAA compliance
+src/backend/src/core/security.py @security-team
+
+# Security Configuration
+# Strictly owned by security team for HIPAA compliance
+src/backend/src/config/security.py @security-team
+
+# Test Suites
+# Requires both QA and backend team review
+src/backend/tests/** @qa-team @backend-team
+
+# Documentation and API Specifications
+docs/** @backend-team @frontend-team
+
+# Database Migrations and Schemas
+# Requires both backend and security review for HIPAA compliance
+src/backend/src/db/** @backend-team @security-team
+
+# Healthcare Integration Components
+# Requires backend and security review for HIPAA compliance
+src/backend/src/integrations/** @backend-team @security-team
+
+# Audit Logging Components
+# Requires security team review for HIPAA compliance
+src/backend/src/audit/** @security-team
+
+# Configuration Files
+# Requires security review for sensitive configurations
+config/** @security-team @devops-team
+
+# Package Dependencies
+# Requires security review for vulnerability management
+package.json @security-team @frontend-team
+requirements.txt @security-team @backend-team
+
+# Docker Configuration
+# Requires both DevOps and security review
+Dockerfile* @devops-team @security-team
+docker-compose*.yml @devops-team @security-team
+
+# Environment Configuration
+# Requires security review for sensitive variables
+.env* @security-team @devops-team
