@@ -1,0 +1,21 @@
+Official source: https://rsms.me/inter/
+
+File specifications:
+- Font family: Inter
+- Weight: 400 (Regular)
+- Format: WOFF2
+- Unicode range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD
+- Optimized with WOFF2 compression for web delivery
+- Implements font-display: swap strategy
+- Configured for browser caching
+- Subset for minimal file size while maintaining required character support
+
+Steps to implement:
+1. Download Inter-Regular.woff2 from the official Inter font repository
+2. Verify file integrity and format
+3. Place in src/web/src/assets/fonts/inter/ directory
+4. Configure proper CORS and caching headers on the web server
+5. Reference in CSS using @font-face declaration
+6. Implement with font-display: swap for optimal loading
+
+The binary file content is not shown here as it should be obtained from the official source to ensure integrity and licensing compliance.
