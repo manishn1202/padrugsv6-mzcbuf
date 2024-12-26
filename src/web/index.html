@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Character encoding and viewport settings -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- Primary meta tags -->
+  <meta name="description" content="Prior Authorization Management System for streamlined healthcare prior authorization processing">
+  <meta name="application-name" content="PA Management System">
+  <meta name="theme-color" content="#0066CC">
+
+  <!-- Mobile web app capable -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- Security headers -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.pamanagement.com; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+  <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
+
+  <!-- Title -->
+  <title>Prior Authorization Management System</title>
+
+  <!-- Preconnect to required domains -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Favicons and manifest -->
+  <link rel="icon" href="./favicon.ico">
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="./src/styles/global.css">
+
+  <!-- Font loading -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Application root -->
+  <div 
+    id="root"
+    role="main"
+    aria-label="Prior Authorization Management System Application"
+  ></div>
+
+  <!-- No JavaScript fallback -->
+  <noscript>
+    <div class="noscript-message">
+      You need to enable JavaScript to run this application.
+    </div>
+  </noscript>
+
+  <!-- Main application script -->
+  <script type="module" src="./src/main.tsx" defer nonce="${nonce}"></script>
+</body>
+</html>
