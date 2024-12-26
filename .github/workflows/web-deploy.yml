@@ -1,0 +1,183 @@
+# Prior Authorization Management System Web Frontend Deployment
+# Version: 1.0.0
+# HIPAA Compliance: Enforced through security scanning and deployment validation
+name: Web Frontend Deploy
+
+# Trigger on successful completion of Web CI workflow
+on:
+  workflow_run:
+    workflows: ["Web Frontend CI"]
+    branches: [main]
+    types: [completed]
+
+# Environment variables
+env:
+  NODE_VERSION: '18.x'
+  WORKING_DIRECTORY: './src/web'
+  AWS_REGION: 'us-east-1'
+  DOCKER_BUILDKIT: '1'
+  ECR_REPOSITORY: 'prior-auth-web'
+  ECS_CLUSTER: 'prior-auth-cluster'
+  ECS_SERVICE: 'web-service'
+  CONTAINER_NAME: 'web'
+  HEALTH_CHECK_ENDPOINT: '/health'
+  DEPLOYMENT_TIMEOUT: '600'
+
+# Concurrency control
+concurrency:
+  group: web-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+# Define required permissions
+permissions:
+  id-token: write
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  deploy-to-ecs:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+
+    steps:
+      # Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Configure AWS credentials using OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-deploy
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      # Login to Amazon ECR
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registries: ${{ secrets.AWS_ACCOUNT_ID }}
+
+      # Build and push Docker image with security scanning
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ env.WORKING_DIRECTORY }}
+          file: infrastructure/docker/web.dockerfile
+          push: true
+          tags: |
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+          build-args: |
+            VITE_API_URL=/api
+            BUILD_VERSION=${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+          cache-to: type=inline
+          platforms: linux/amd64
+          provenance: true
+          sbom: true
+          security-opt: seccomp=unconfined
+
+      # Scan container image for vulnerabilities
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      # Upload security scan results
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'container-security'
+
+      # Validate ECS task definition
+      - name: Validate ECS task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_SERVICE }} \
+            --query 'taskDefinition' \
+            --output json > task-definition.json
+
+      # Deploy to ECS with canary release
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          wait-for-minutes: 10
+          codedeploy-appspec: |
+            version: 0.0
+            Resources:
+              - TargetService:
+                  Type: AWS::ECS::Service
+                  Properties:
+                    TaskDefinition: <TASK_DEFINITION>
+                    LoadBalancerInfo:
+                      ContainerName: ${{ env.CONTAINER_NAME }}
+                      ContainerPort: 3000
+                    PlatformVersion: LATEST
+
+      # Health check verification
+      - name: Verify deployment health
+        run: |
+          endpoint="https://${{ secrets.APP_DOMAIN }}${{ env.HEALTH_CHECK_ENDPOINT }}"
+          max_attempts=30
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" $endpoint)
+            
+            if [ "$response" = "200" ]; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            
+            echo "Attempt $attempt: Health check failed with status $response"
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+          
+          echo "Health check failed after $max_attempts attempts"
+          exit 1
+
+      # Monitor deployment metrics
+      - name: Monitor deployment metrics
+        run: |
+          aws cloudwatch get-metric-statistics \
+            --namespace AWS/ECS \
+            --metric-name CPUUtilization \
+            --dimensions Name=ServiceName,Value=${{ env.ECS_SERVICE }} Name=ClusterName,Value=${{ env.ECS_CLUSTER }} \
+            --start-time $(date -u -v-5M +"%Y-%m-%dT%H:%M:%SZ") \
+            --end-time $(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --period 60 \
+            --statistics Average
+
+      # Verify HIPAA compliance
+      - name: Verify HIPAA compliance
+        run: |
+          # Check security headers
+          response_headers=$(curl -s -I https://${{ secrets.APP_DOMAIN }})
+          
+          # Verify required security headers
+          echo "$response_headers" | grep -q "Strict-Transport-Security" || exit 1
+          echo "$response_headers" | grep -q "X-Content-Type-Options" || exit 1
+          echo "$response_headers" | grep -q "X-Frame-Options" || exit 1
+          echo "$response_headers" | grep -q "Content-Security-Policy" || exit 1
+          
+          # Verify SSL/TLS configuration
+          ssl_check=$(curl -s -v https://${{ secrets.APP_DOMAIN }} 2>&1 | grep "SSL connection using")
+          echo "$ssl_check" | grep -q "TLSv1.2\|TLSv1.3" || exit 1
