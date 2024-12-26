@@ -1,0 +1,114 @@
+[tool.poetry]
+name = "prior-auth-backend"
+version = "1.0.0"
+description = "HIPAA-compliant Prior Authorization Management System Backend"
+authors = ["Development Team"]
+license = "Proprietary"
+readme = "README.md"
+repository = "https://github.com/org/prior-auth-system"
+keywords = ["healthcare", "prior-authorization", "HIPAA", "FHIR"]
+packages = [
+    { include = "prior_auth", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.100.0"
+pydantic = "^2.0.0"
+sqlalchemy = "^2.0.0"
+fhir.resources = "^6.5.0"
+anthropic = "^0.3.0"
+langchain = "^0.1.0"
+celery = "^5.3.0"
+redis = "^4.6.0"
+boto3 = "^1.28.0"
+aws-xray-sdk = "^2.12.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-multipart = "^0.0.6"
+uvicorn = {extras = ["standard"], version = "^0.23.0"}
+alembic = "^1.11.0"
+psycopg2-binary = "^2.9.6"
+python-dotenv = "^1.0.0"
+structlog = "^23.1.0"
+httpx = "^0.24.0"
+tenacity = "^8.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.11.1"
+pytest-asyncio = "^0.21.1"
+black = "^23.7.0"
+isort = "^5.12.0"
+flake8 = "^6.1.0"
+mypy = "^1.4.0"
+bandit = "^1.7.5"
+safety = "^2.3.0"
+pre-commit = "^3.3.0"
+types-redis = "^4.6.0"
+types-boto3 = "^1.0.2"
+types-python-jose = "^3.3.4"
+types-passlib = "^1.7.7"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=src --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
+markers = [
+    "integration: Integration tests",
+    "security: Security tests",
+    "hipaa: HIPAA compliance tests"
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+include = '\.pyi?$'
+extend-exclude = "/migrations/"
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 100
+known_first_party = ["prior_auth"]
+known_third_party = ["fastapi", "pydantic", "sqlalchemy"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+disallow_any_generics = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "redis.*", "boto3.*", "anthropic.*", "langchain.*"]
+ignore_missing_imports = true
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+max-complexity = 10
+per-file-ignores = """
+    __init__.py: F401
+    tests/*: S101,S105
+"""
+
+[tool.bandit]
+targets = ["src"]
+exclude_dirs = ["tests", "migrations"]
+tests = ["B101", "B102", "B103"]
+skips = ["B311"]
+
+[tool.poetry.scripts]
+start = "prior_auth.main:start"
+worker = "prior_auth.worker:start"
