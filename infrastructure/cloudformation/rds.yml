@@ -1,0 +1,182 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: HIPAA-compliant RDS PostgreSQL Database Infrastructure for Prior Authorization Management System
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+      - Label:
+          default: "Database Configuration"
+        Parameters:
+          - DBInstanceClass
+          - DBName
+          - DBUsername
+          - DBPassword
+    ParameterLabels:
+      Environment:
+        default: "Deployment Environment"
+      DBInstanceClass:
+        default: "Database Instance Type"
+      DBName:
+        default: "Database Name"
+      DBUsername:
+        default: "Admin Username"
+      DBPassword:
+        default: "Admin Password"
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment environment (dev/staging/prod)
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Default: dev
+
+  DBInstanceClass:
+    Type: String
+    Description: RDS instance class for database
+    Default: db.r6g.xlarge
+    AllowedValues:
+      - db.r6g.large
+      - db.r6g.xlarge
+      - db.r6g.2xlarge
+
+  DBName:
+    Type: String
+    Description: Name of the database
+    MinLength: 3
+    MaxLength: 64
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9_]*"
+    ConstraintDescription: Must start with a letter and contain only alphanumeric characters or underscores
+
+  DBUsername:
+    Type: String
+    Description: Database administrator username
+    MinLength: 8
+    MaxLength: 16
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9_]*"
+    ConstraintDescription: Must start with a letter and contain only alphanumeric characters or underscores
+    NoEcho: true
+
+  DBPassword:
+    Type: String
+    Description: Database administrator password
+    MinLength: 16
+    MaxLength: 41
+    AllowedPattern: "[a-zA-Z0-9!@#$%^&*()_+=-]+"
+    ConstraintDescription: Must contain at least 16 characters including uppercase, lowercase, numbers, and special characters
+    NoEcho: true
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, 'prod']
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private subnet group for RDS instance
+      SubnetIds: !Split [',', !ImportValue vpc-stack-DatabaseSubnetIds]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-pa-system-db-subnet-group
+        - Key: Environment
+          Value: !Ref Environment
+
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Family: postgres15
+      Description: Custom parameter group for PA System database
+      Parameters:
+        # Security Parameters
+        ssl: '1'
+        rds.force_ssl: '1'
+        password_encryption: 'scram-sha-256'
+        # Logging Parameters
+        log_statement: 'all'
+        log_min_duration_statement: '1000'
+        log_connections: '1'
+        log_disconnections: '1'
+        # Performance Parameters
+        shared_preload_libraries: 'pg_stat_statements'
+        pg_stat_statements.track: 'all'
+        work_mem: '16384'
+        maintenance_work_mem: '2097152'
+        effective_cache_size: '16777216'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: !Ref DBName
+      Engine: postgres
+      EngineVersion: '15.4'
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !If [IsProduction, 500, 100]
+      MaxAllocatedStorage: !If [IsProduction, 2000, 1000]
+      StorageType: gp3
+      StorageEncrypted: true
+      MultiAZ: !If [IsProduction, true, false]
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      DBParameterGroupName: !Ref DBParameterGroup
+      VPCSecurityGroups: 
+        - !ImportValue security-stack-DBSecurityGroupId
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      BackupRetentionPeriod: !If [IsProduction, 35, 7]
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'Mon:04:00-Mon:05:00'
+      MonitoringInterval: 60
+      MonitoringRoleArn: !ImportValue monitoring-stack-RDSMonitoringRole
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: !If [IsProduction, 7, 7]
+      EnableCloudwatchLogsExports:
+        - postgresql
+        - upgrade
+      DeletionProtection: !If [IsProduction, true, false]
+      CopyTagsToSnapshot: true
+      AutoMinorVersionUpgrade: true
+      AllowMajorVersionUpgrade: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-pa-system-db
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: HIPAA
+          Value: 'true'
+        - Key: Backup
+          Value: !If [IsProduction, 'daily', 'weekly']
+        - Key: Encryption
+          Value: 'aes256'
+
+Outputs:
+  DBEndpoint:
+    Description: Database connection endpoint
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub ${AWS::StackName}-DBEndpoint
+
+  DBPort:
+    Description: Database port
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Export:
+      Name: !Sub ${AWS::StackName}-DBPort
+
+  DBArn:
+    Description: Database instance ARN
+    Value: !GetAtt DBInstance.DBInstanceArn
+    Export:
+      Name: !Sub ${AWS::StackName}-DBArn
+
+  DBSecurityGroup:
+    Description: Security group ID for database access
+    Value: !ImportValue security-stack-DBSecurityGroupId
+    Export:
+      Name: !Sub ${AWS::StackName}-DBSecurityGroup
