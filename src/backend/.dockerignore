@@ -1,0 +1,133 @@
+# Python Artifacts
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.pytest_cache
+.coverage
+.mypy_cache
+*.egg-info
+dist/
+build/
+*.so
+
+# Development Tools & Environment
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+.env*
+.python-version
+.editorconfig
+
+# Testing & Quality Tools
+tests/
+test_*.py
+*.test.py
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+pytest.ini
+.pytest_cache/
+
+# Documentation
+*.md
+docs/
+README*
+CHANGELOG*
+LICENSE*
+CONTRIBUTING*
+
+# Docker Files
+docker-compose*.yml
+.dockerignore
+Dockerfile*
+
+# Logs & Temporary Files
+*.log
+logs/
+log/
+tmp/
+temp/
+
+# Security & Credentials
+*.env
+*.key
+*.pem
+*.crt
+*.p12
+secrets/
+credentials/
+.aws/
+.ssh/
+
+# Dependencies (keep only requirements.txt)
+poetry.lock
+pyproject.toml
+Pipfile
+Pipfile.lock
+poetry.toml
+.venv/
+venv/
+env/
+
+# Development Configs
+.flake8
+.isort.cfg
+.pre-commit-config.yaml
+mypy.ini
+bandit.yaml
+.style.yapf
+setup.cfg
+tox.ini
+
+# Cache & Local Data
+.cache/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.sublime-*
+*.code-workspace
+.project
+.settings/
+.classpath
+
+# System Files
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+*.temp
+
+# Benchmarking & Profiling
+benchmarks/
+profiling/
+*.prof
+*.lprof
+
+# CI/CD
+.github/
+.gitlab/
+.circleci/
+.travis.yml
+.gitlab-ci.yml
+.jenkins*
+
+# Misc Development Files
+*.ipynb
+.ipynb_checkpoints/
+*.pickle
+*.pkl
+*.h5
+*.sqlite
+*.db
