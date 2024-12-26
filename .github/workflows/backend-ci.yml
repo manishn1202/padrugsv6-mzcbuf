@@ -1,0 +1,252 @@
+name: Backend CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/backend/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/backend/**'
+  schedule:
+    - cron: '0 0 * * *'  # Daily security scans
+
+env:
+  PYTHON_VERSION: '3.11'
+  POETRY_VERSION: '1.7.0'
+  PYTHONPATH: src/backend/src
+  COVERAGE_THRESHOLD: 90  # From pyproject.toml
+  MAX_TIMEOUT_MINUTES: 15
+
+jobs:
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 - --version ${{ env.POETRY_VERSION }}
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        run: |
+          cd src/backend
+          poetry install --no-interaction --no-root
+
+      - name: Run black
+        run: |
+          cd src/backend
+          poetry run black . --check
+
+      - name: Run isort
+        run: |
+          cd src/backend
+          poetry run isort . --check-only --diff
+
+      - name: Run flake8
+        run: |
+          cd src/backend
+          poetry run flake8 .
+
+      - name: Run mypy
+        run: |
+          cd src/backend
+          poetry run mypy .
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ env.MAX_TIMEOUT_MINUTES }}
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/python@v3
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
+          args: --severity-threshold=high
+
+      - name: Run bandit
+        run: |
+          cd src/backend
+          poetry run bandit -r src -c pyproject.toml
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: python
+          queries: security-and-quality
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: high
+
+      - name: HIPAA Compliance Check
+        run: |
+          chmod +x scripts/hipaa-compliance-check.sh
+          ./scripts/hipaa-compliance-check.sh
+        env:
+          HIPAA_COMPLIANCE_CHECK: true
+
+      - name: Generate Security Report
+        if: always()
+        run: |
+          echo "Security Scan Summary" > security-report.txt
+          echo "===================" >> security-report.txt
+          echo "Snyk Scan: ${{ job.status }}" >> security-report.txt
+          echo "Bandit Scan: ${{ job.status }}" >> security-report.txt
+          echo "CodeQL Analysis: ${{ job.status }}" >> security-report.txt
+          echo "HIPAA Compliance: ${{ job.status }}" >> security-report.txt
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: security-report.txt
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 - --version ${{ env.POETRY_VERSION }}
+          poetry config virtualenvs.create true
+
+      - name: Install dependencies
+        run: |
+          cd src/backend
+          poetry install --no-interaction
+
+      - name: Run pytest with coverage
+        run: |
+          cd src/backend
+          poetry run pytest --cov=src --cov-report=xml --cov-report=term-missing
+
+      - name: Verify coverage meets threshold
+        run: |
+          cd src/backend
+          poetry run coverage report --fail-under=${{ env.COVERAGE_THRESHOLD }}
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: src/backend/coverage.xml
+
+  integration-tests:
+    name: Integration Tests
+    needs: [unit-tests, security-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ env.MAX_TIMEOUT_MINUTES }}
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7.0
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 - --version ${{ env.POETRY_VERSION }}
+          poetry config virtualenvs.create true
+
+      - name: Install dependencies
+        run: |
+          cd src/backend
+          poetry install --no-interaction
+
+      - name: Run integration tests
+        run: |
+          cd src/backend
+          poetry run pytest tests/integration --marker integration
+        env:
+          DATABASE_URL: postgresql://test_user:${{ secrets.TEST_DB_PASSWORD }}@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+
+      - name: Validate security context
+        run: |
+          cd src/backend
+          poetry run pytest tests/security --marker security
+
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
