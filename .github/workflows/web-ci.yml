@@ -1,0 +1,167 @@
+# Prior Authorization Management System Web Frontend CI Pipeline
+# Version: 1.0.0
+# HIPAA Compliance: Enforced through security checks and audit logging
+name: Web Frontend CI
+
+# Trigger workflow on push and pull requests to main and develop branches
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/web/**'
+      - '.github/workflows/web-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/web/**'
+      - '.github/workflows/web-ci.yml'
+
+# Environment variables
+env:
+  NODE_VERSION: '18.x'
+  WORKING_DIRECTORY: './src/web'
+  COVERAGE_THRESHOLD: 90
+  SECURITY_AUDIT_LEVEL: 'high'
+
+# Concurrency control to prevent redundant workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Define permissions required for the workflow
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  security-events: write
+
+jobs:
+  # Security audit job to run npm audit and HIPAA compliance checks
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/package-lock.json
+
+      - name: Run npm audit
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          echo "Running security audit with level: ${{ env.SECURITY_AUDIT_LEVEL }}"
+          npm audit --audit-level=${{ env.SECURITY_AUDIT_LEVEL }} --production
+          
+      - name: Run HIPAA compliance checks
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          # Check for sensitive data patterns in code
+          ! find . -type f -name "*.{ts,tsx,json}" -exec grep -l -E "(password|secret|key|token)" {} \;
+          
+          # Verify security headers in configuration
+          if [ -f "src/config/security.ts" ]; then
+            grep -q "Strict-Transport-Security" "src/config/security.ts"
+            grep -q "Content-Security-Policy" "src/config/security.ts"
+          fi
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            ${{ env.WORKING_DIRECTORY }}/npm-audit.json
+            ${{ env.WORKING_DIRECTORY }}/security-scan-results.json
+          retention-days: 30
+
+  # Build and test job for the web frontend
+  build-and-test:
+    name: Build and Test
+    needs: security-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/package-lock.json
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ env.WORKING_DIRECTORY }}/node_modules
+            ${{ env.WORKING_DIRECTORY }}/.next/cache
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Type check
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run typecheck
+
+      - name: Lint code
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run test
+        env:
+          CI: true
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Check coverage thresholds
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          npm run test:coverage
+          if [ $? -ne 0 ]; then
+            echo "Error: Test coverage is below the required threshold of ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          fi
+
+      - name: Build application
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run build
+        env:
+          CI: true
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            ${{ env.WORKING_DIRECTORY }}/dist
+            ${{ env.WORKING_DIRECTORY }}/coverage
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: |
+            ${{ env.WORKING_DIRECTORY }}/coverage/junit
+            ${{ env.WORKING_DIRECTORY }}/coverage/lcov-report
+          retention-days: 14
