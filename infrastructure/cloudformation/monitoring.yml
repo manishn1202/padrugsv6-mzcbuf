@@ -1,0 +1,219 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: HIPAA-compliant monitoring infrastructure for Prior Authorization Management System
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - RetentionDays
+      - Label:
+          default: "Security Configuration"
+        Parameters:
+          - SamlMetadata
+          - GrafanaUserRoles
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [dev, staging, prod]
+    Default: dev
+    Description: Deployment environment name
+
+  RetentionDays:
+    Type: Number
+    Default: 2555  # 7 years for HIPAA compliance
+    Description: Log retention period in days
+
+  SamlMetadata:
+    Type: String
+    Description: SAML metadata for Grafana SSO integration
+
+  GrafanaUserRoles:
+    Type: CommaDelimitedList
+    Default: "Admin,Editor,Viewer"
+    Description: Grafana user roles for SSO mapping
+
+Resources:
+  # KMS Encryption Key for Logs
+  LogEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for monitoring data encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
+          - Sid: Allow CloudWatch Logs
+            Effect: Allow
+            Principal:
+              Service: logs.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: '*'
+
+  # CloudWatch Log Groups
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${AWS::StackName}-application-logs
+      RetentionInDays: !Ref RetentionDays
+      KmsKeyId: !GetAtt LogEncryptionKey.Arn
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: HIPAA
+          Value: true
+        - Key: Retention
+          Value: 7years
+
+  AuditLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${AWS::StackName}-audit-logs
+      RetentionInDays: !Ref RetentionDays
+      KmsKeyId: !GetAtt LogEncryptionKey.Arn
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: HIPAA
+          Value: true
+        - Key: Type
+          Value: Audit
+
+  # Prometheus Workspace
+  PrometheusWorkspace:
+    Type: AWS::AMP::Workspace
+    Properties:
+      Alias: !Sub ${AWS::StackName}-prometheus
+      LoggingConfiguration:
+        LogGroupArn: !GetAtt ApplicationLogGroup.Arn
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: SecurityLevel
+          Value: High
+
+  # Grafana Workspace
+  GrafanaWorkspaceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: grafana.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGrafanaAthenaAccess
+        - arn:aws:iam::aws:policy/service-role/AWSGrafanaCloudWatchAccess
+
+  GrafanaWorkspace:
+    Type: AWS::Grafana::Workspace
+    Properties:
+      Name: !Sub ${AWS::StackName}-grafana
+      AccountAccessType: CURRENT_ACCOUNT
+      AuthenticationProviders: [AWS_SSO]
+      PermissionType: SERVICE_MANAGED
+      DataSources:
+        - PROMETHEUS
+        - CLOUDWATCH
+        - XRAY
+      RoleArn: !GetAtt GrafanaWorkspaceRole.Arn
+      SamlConfiguration:
+        IdpMetadata: !Ref SamlMetadata
+        RoleValues: !Ref GrafanaUserRoles
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: AccessControl
+          Value: SSO
+
+  # CloudWatch Alarms
+  ResponseTimeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-response-time-breach
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 2
+      Metrics:
+        - Id: m1
+          Expression: "SELECT AVG(Duration) FROM SCHEMA(\"AWS/ApiGateway\", ApiId,Stage)"
+          Period: 300
+          ReturnData: true
+      Threshold: 3000  # 3 seconds SLA threshold
+      TreatMissingData: breaching
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: SLAType
+          Value: ResponseTime
+
+  AvailabilityAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-availability-breach
+      ComparisonOperator: LessThanThreshold
+      EvaluationPeriods: 2
+      Metrics:
+        - Id: m1
+          Expression: "SELECT AVG(HealthyHostCount) FROM SCHEMA(\"AWS/ApplicationELB\", LoadBalancer)"
+          Period: 300
+          ReturnData: true
+      Threshold: 99.9  # 99.9% availability SLA
+      TreatMissingData: breaching
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: SLAType
+          Value: Availability
+
+Outputs:
+  LogGroupArn:
+    Description: Application Log Group ARN
+    Value: !GetAtt ApplicationLogGroup.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-LogGroupArn
+
+  LogGroupName:
+    Description: Application Log Group Name
+    Value: !Ref ApplicationLogGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-LogGroupName
+
+  PrometheusWorkspaceArn:
+    Description: Prometheus Workspace ARN
+    Value: !GetAtt PrometheusWorkspace.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-PrometheusArn
+
+  PrometheusEndpoint:
+    Description: Prometheus API Endpoint
+    Value: !GetAtt PrometheusWorkspace.PrometheusEndpoint
+    Export:
+      Name: !Sub ${AWS::StackName}-PrometheusEndpoint
+
+  GrafanaEndpoint:
+    Description: Grafana Workspace Endpoint
+    Value: !GetAtt GrafanaWorkspace.Endpoint
+    Export:
+      Name: !Sub ${AWS::StackName}-GrafanaEndpoint
+
+  GrafanaVersion:
+    Description: Grafana Version
+    Value: !GetAtt GrafanaWorkspace.GrafanaVersion
+    Export:
+      Name: !Sub ${AWS::StackName}-GrafanaVersion
