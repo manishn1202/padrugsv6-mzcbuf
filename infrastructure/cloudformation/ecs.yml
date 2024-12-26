@@ -1,0 +1,315 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ECS Infrastructure for Prior Authorization Management System
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - ContainerImage
+      - Label:
+          default: "Container Configuration"
+        Parameters:
+          - ContainerPort
+          - TaskCpu
+          - TaskMemory
+      - Label:
+          default: "Scaling Configuration"
+        Parameters:
+          - DesiredCount
+          - MaxCount
+      - Label:
+          default: "Health Check Configuration"
+        Parameters:
+          - HealthCheckPath
+          - HealthCheckInterval
+
+Parameters:
+  Environment:
+    Description: Environment name (dev/staging/prod)
+    Type: String
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Default: dev
+
+  ContainerImage:
+    Description: Docker image for the application
+    Type: String
+
+  ContainerPort:
+    Description: Port exposed by the container
+    Type: Number
+    Default: 8000
+
+  DesiredCount:
+    Description: Desired number of tasks
+    Type: Number
+    Default: 2
+    MinValue: 1
+
+  MaxCount:
+    Description: Maximum number of tasks
+    Type: Number
+    Default: 10
+    MinValue: 1
+
+  TaskCpu:
+    Description: Task CPU units (1 vCPU = 1024)
+    Type: String
+    Default: '1024'
+    AllowedValues: ['256', '512', '1024', '2048', '4096']
+
+  TaskMemory:
+    Description: Task memory (MB)
+    Type: String
+    Default: '2048'
+    AllowedValues: ['512', '1024', '2048', '4096', '8192', '16384']
+
+  HealthCheckPath:
+    Description: Health check endpoint path
+    Type: String
+    Default: '/health'
+
+  HealthCheckInterval:
+    Description: Health check interval in seconds
+    Type: Number
+    Default: 30
+    MinValue: 5
+    MaxValue: 300
+
+Resources:
+  # ECS Cluster
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${Environment}-pa-system
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-pa-system-cluster
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: HIPAA
+          Value: PHI
+
+  # Task Definition
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${Environment}-pa-system
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities: 
+        - FARGATE
+      ExecutionRoleArn: !ImportValue ecs-execution-role
+      TaskRoleArn: !ImportValue ecs-task-role
+      ContainerDefinitions:
+        - Name: app
+          Image: !Ref ContainerImage
+          Essential: true
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              Protocol: tcp
+          HealthCheck:
+            Command: 
+              - CMD-SHELL
+              - !Sub curl -f http://localhost:${ContainerPort}${HealthCheckPath} || exit 1
+            Interval: !Ref HealthCheckInterval
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub /ecs/${Environment}-pa-system
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+              awslogs-create-group: true
+          Environment:
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+          Secrets:
+            - Name: DATABASE_URL
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/database/url
+          LinuxParameters:
+            InitProcessEnabled: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-pa-system-task
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: HIPAA
+          Value: PHI
+
+  # Application Load Balancer
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${Environment}-pa-system-alb
+      Type: application
+      Scheme: internet-facing
+      SecurityGroups: 
+        - !ImportValue alb-security-group
+      Subnets: !Split [',', !ImportValue vpc-PublicSubnets]
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: true
+        - Key: access_logs.s3.bucket
+          Value: !ImportValue alb-logs-bucket
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+        - Key: deletion_protection.enabled
+          Value: !If [IsProd, 'true', 'false']
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-pa-system-alb
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: HIPAA
+          Value: PHI
+
+  # Target Group
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${Environment}-pa-system-tg
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: !ImportValue vpc-VpcId
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckIntervalSeconds: !Ref HealthCheckInterval
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-pa-system-tg
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ALB Listener
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !ImportValue ssl-certificate
+      SslPolicy: ELBSecurityPolicy-TLS-1-2-2017-01
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ECS Service
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn: HttpsListener
+    Properties:
+      ServiceName: !Sub ${Environment}-pa-system
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      PlatformVersion: LATEST
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !ImportValue ecs-security-group
+          Subnets: !Split [',', !ImportValue vpc-PrivateSubnets]
+      LoadBalancers:
+        - ContainerName: app
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroup
+      HealthCheckGracePeriodSeconds: 60
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      EnableExecuteCommand: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-pa-system-service
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: HIPAA
+          Value: PHI
+
+  # Auto Scaling
+  ScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: !Ref MaxCount
+      MinCapacity: !Ref DesiredCount
+      ResourceId: !Sub service/${ECSCluster}/${ECSService}
+      RoleARN: !ImportValue autoscaling-role
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  CPUScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub ${Environment}-pa-system-cpu-scaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 70.0
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 60
+
+  MemoryScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub ${Environment}-pa-system-memory-scaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageMemoryUtilization
+        TargetValue: 80.0
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 60
+
+Conditions:
+  IsProd: !Equals [!Ref Environment, 'prod']
+
+Outputs:
+  ClusterId:
+    Description: ECS Cluster ID
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub ${AWS::StackName}-ClusterId
+
+  LoadBalancerDNS:
+    Description: Load balancer DNS name
+    Value: !GetAtt LoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-LoadBalancerDNS
+
+  ServiceName:
+    Description: ECS Service name
+    Value: !GetAtt ECSService.Name
+    Export:
+      Name: !Sub ${AWS::StackName}-ServiceName
+
+  TargetGroupArn:
+    Description: Target Group ARN
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-TargetGroupArn
