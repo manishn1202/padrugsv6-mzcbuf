@@ -1,0 +1,169 @@
+version: "3.8"
+
+services:
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_ENV: development
+    image: prior-auth-api:latest
+    container_name: prior-auth-api
+    restart: unless-stopped
+    environment:
+      - APP_ENV=development
+      - DEBUG=True
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=prior_auth_db
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=cache
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src:ro
+      - ./data:/app/data:ro
+      - audit_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+      fluentd:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "api.{{.Name}}"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    networks:
+      - prior-auth-network
+
+  # Database Service
+  db:
+    image: postgres:15.0-alpine
+    container_name: prior-auth-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=prior_auth_db
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d prior_auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - prior-auth-network
+
+  # Cache Service
+  cache:
+    image: redis:7.0-alpine
+    container_name: prior-auth-cache
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - prior-auth-network
+
+  # Log Aggregation Service
+  fluentd:
+    image: fluentd:v1.16-1
+    container_name: prior-auth-fluentd
+    restart: unless-stopped
+    volumes:
+      - ./fluentd/conf:/fluentd/etc:ro
+      - audit_logs:/fluentd/log
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - prior-auth-network
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: encrypted
+      device: /dev/xvdf
+      o: enc
+  redis_data:
+    driver: local
+    driver_opts:
+      type: encrypted
+      device: /dev/xvdg
+      o: enc
+  audit_logs:
+    driver: local
+    driver_opts:
+      type: encrypted
+      device: /dev/xvdh
+      o: enc
+
+networks:
+  prior-auth-network:
+    driver: bridge
+    driver_opts:
+      encrypted: "true"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+          ip_range: 172.28.5.0/24
+          gateway: 172.28.5.254
