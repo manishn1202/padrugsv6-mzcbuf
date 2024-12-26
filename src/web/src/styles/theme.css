@@ -1,0 +1,180 @@
+/**
+ * Core Theme Stylesheet
+ * Implements HIPAA-compliant design system with enhanced accessibility
+ * Version: 1.0.0
+ * Dependencies: variables.css
+ */
+
+@import '../styles/variables.css';
+
+/* Root Theme Configuration
+----------------------------------------*/
+:root {
+  /* Core Theme Transition */
+  --theme-transition: all 200ms ease-in-out;
+  
+  /* Focus Ring for Accessibility */
+  --focus-ring: 0 0 0 3px var(--color-primary-alpha);
+  
+  /* Medical Display Optimization */
+  --medical-display-dpi: min-resolution: 2dppx;
+}
+
+/* Base Styles
+----------------------------------------*/
+body {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Theme Variants
+----------------------------------------*/
+
+/* Light Theme - Default for Medical Interfaces */
+.theme-light {
+  /* Background Colors */
+  --color-background: #F8F9FA;
+  --color-background-elevated: #FFFFFF;
+  
+  /* Text Colors */
+  --color-text-primary: #212529;
+  --color-text-secondary: #6C757D;
+  
+  /* Brand Colors */
+  --color-primary: #0066CC;
+  --color-primary-alpha: rgba(0, 102, 204, 0.2);
+  --color-secondary: #00A3E0;
+  
+  /* Status Colors */
+  --color-success: #28A745;
+  --color-warning: #FFC107;
+  --color-error: #DC3545;
+  
+  /* Shadows */
+  --shadow-elevation-1: 0 2px 4px rgba(33, 37, 41, 0.1);
+  --shadow-elevation-2: 0 4px 8px rgba(33, 37, 41, 0.15);
+  --shadow-elevation-3: 0 8px 16px rgba(33, 37, 41, 0.2);
+}
+
+/* Dark Theme - Reduced Eye Strain for Night Shifts */
+.theme-dark {
+  /* Background Colors */
+  --color-background: #212529;
+  --color-background-elevated: #343A40;
+  
+  /* Text Colors */
+  --color-text-primary: #F8F9FA;
+  --color-text-secondary: #ADB5BD;
+  
+  /* Brand Colors */
+  --color-primary: #4D9FFF;
+  --color-primary-alpha: rgba(77, 159, 255, 0.2);
+  --color-secondary: #33B5E6;
+  
+  /* Status Colors */
+  --color-success: #48C767;
+  --color-warning: #FFCD39;
+  --color-error: #E4606D;
+  
+  /* Shadows */
+  --shadow-elevation-1: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-elevation-2: 0 4px 8px rgba(0, 0, 0, 0.25);
+  --shadow-elevation-3: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* High Contrast Theme - WCAG 2.1 AAA Compliance */
+.theme-high-contrast {
+  /* Background Colors */
+  --color-background: #FFFFFF;
+  --color-background-elevated: #F8F9FA;
+  
+  /* Text Colors */
+  --color-text-primary: #000000;
+  --color-text-secondary: #404040;
+  
+  /* Brand Colors */
+  --color-primary: #0041A3;
+  --color-primary-alpha: rgba(0, 65, 163, 0.3);
+  --color-secondary: #007AA8;
+  
+  /* Status Colors */
+  --color-success: #1E7E34;
+  --color-warning: #D39E00;
+  --color-error: #BD2130;
+  
+  /* Shadows */
+  --shadow-elevation-1: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-elevation-2: 0 4px 8px rgba(0, 0, 0, 0.35);
+  --shadow-elevation-3: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive Design Support
+----------------------------------------*/
+@media screen and (min-width: var(--breakpoint-sm)) {
+  body {
+    font-size: calc(var(--font-size-base) * 1);
+  }
+}
+
+@media screen and (min-width: var(--breakpoint-md)) {
+  body {
+    font-size: calc(var(--font-size-base) * 1.0625);
+  }
+}
+
+@media screen and (min-width: var(--breakpoint-lg)) {
+  body {
+    font-size: calc(var(--font-size-base) * 1.125);
+  }
+}
+
+/* Medical Display Optimization
+----------------------------------------*/
+@media screen and (min-resolution: 2dppx) {
+  body {
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+  
+  /* Enhance contrast for medical imagery */
+  img[class*="medical-image"] {
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Focus Management for Accessibility
+----------------------------------------*/
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  transition: box-shadow var(--theme-transition);
+}
+
+/* Reduced Motion Support
+----------------------------------------*/
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print Optimization
+----------------------------------------*/
+@media print {
+  body {
+    background: none;
+    color: #000;
+  }
+
+  @page {
+    margin: 2cm;
+  }
+}
