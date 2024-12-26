@@ -1,0 +1,188 @@
+/**
+ * Core Typography Stylesheet
+ * Implements design system typography with accessibility and responsive features
+ * Version: 1.0.0
+ */
+
+/* Import design system variables */
+@import './variables.css';
+
+/* Import Inter font family - v5.0.0 */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+
+/* Font face declarations with performance optimizations */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  src: local('Inter'),
+       url('@fontsource/inter/files/inter-latin-400-normal.woff2') format('woff2');
+}
+
+/* Root typography settings */
+:root {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Heading styles with responsive scaling */
+h1, .h1 {
+  font-size: clamp(24px, 5vw, 32px);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  margin-bottom: var(--spacing-lg);
+  color: var(--color-text-primary);
+  max-width: 50ch;
+}
+
+h2, .h2 {
+  font-size: clamp(20px, 4vw, 24px);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-primary);
+  max-width: 50ch;
+}
+
+h3, .h3 {
+  font-size: clamp(18px, 3vw, 20px);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-primary);
+  max-width: 50ch;
+}
+
+h4, .h4 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-heading);
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-primary);
+  max-width: 50ch;
+}
+
+/* Body text styles with accessibility considerations */
+p, .body-text {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-primary);
+  max-width: 75ch; /* Optimal line length for readability */
+}
+
+.body-text-sm {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+}
+
+.body-text-lg {
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+}
+
+/* Text utility classes */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-break {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* Font weight utilities */
+.font-regular {
+  font-weight: var(--font-weight-regular);
+}
+
+.font-medium {
+  font-weight: var(--font-weight-medium);
+}
+
+.font-bold {
+  font-weight: var(--font-weight-bold);
+}
+
+/* Text color utilities */
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-disabled {
+  color: var(--color-text-disabled);
+}
+
+/* Accessibility utilities */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Link styles */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-duration-fast) var(--transition-timing);
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+/* List styles */
+ul, ol {
+  margin-bottom: var(--spacing-md);
+  padding-left: var(--spacing-xl);
+}
+
+li {
+  margin-bottom: var(--spacing-xs);
+}
+
+/* Selection styles */
+::selection {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* Export typography styles as CSS modules */
+:export {
+  heading-styles: h1, h2, h3, h4;
+  text-utilities: text-truncate text-break text-center text-left text-right;
+}
