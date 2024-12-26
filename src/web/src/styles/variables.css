@@ -1,0 +1,120 @@
+/**
+ * Core CSS Custom Properties (Variables)
+ * Defines the application's design system tokens for consistent styling and theming
+ * Version: 1.0.0
+ */
+
+:root {
+  /* Typography
+  ----------------------------------------*/
+  /* Font Family */
+  --font-family-primary: Inter, system-ui, -apple-system, sans-serif;
+
+  /* Font Sizes */
+  --font-size-base: 16px;
+  --font-size-sm: 0.875rem;    /* 14px */
+  --font-size-md: 1rem;        /* 16px */
+  --font-size-lg: 1.125rem;    /* 18px */
+  --font-size-xl: 1.25rem;     /* 20px */
+  --font-size-2xl: 1.5rem;     /* 24px */
+  --font-size-3xl: 2rem;       /* 32px */
+
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+
+  /* Line Heights */
+  --line-height-base: 1.5;
+  --line-height-heading: 1.2;
+  --line-height-tight: 1.1;
+
+  /* Colors
+  ----------------------------------------*/
+  /* Primary Colors */
+  --color-primary: #0066CC;
+  --color-primary-light: #3384D7;
+  --color-primary-dark: #004C99;
+
+  /* Secondary Colors */
+  --color-secondary: #00A3E0;
+  --color-secondary-light: #33B5E6;
+  --color-secondary-dark: #007AA8;
+
+  /* Status Colors */
+  --color-success: #28A745;
+  --color-success-light: #48C767;
+  --color-success-dark: #1E7E34;
+
+  --color-warning: #FFC107;
+  --color-warning-light: #FFCD39;
+  --color-warning-dark: #D39E00;
+
+  --color-error: #DC3545;
+  --color-error-light: #E4606D;
+  --color-error-dark: #BD2130;
+
+  /* Background Colors */
+  --color-background: #F8F9FA;
+  --color-background-alt: #FFFFFF;
+
+  /* Text Colors */
+  --color-text-primary: #212529;
+  --color-text-secondary: #6C757D;
+  --color-text-disabled: #ADB5BD;
+
+  /* Border Colors */
+  --color-border: #DEE2E6;
+
+  /* Spacing
+  ----------------------------------------*/
+  --spacing-unit: 8px;
+  --spacing-2xs: calc(var(--spacing-unit) * 0.25);  /* 2px */
+  --spacing-xs: calc(var(--spacing-unit) * 0.5);    /* 4px */
+  --spacing-sm: var(--spacing-unit);                /* 8px */
+  --spacing-md: calc(var(--spacing-unit) * 2);      /* 16px */
+  --spacing-lg: calc(var(--spacing-unit) * 3);      /* 24px */
+  --spacing-xl: calc(var(--spacing-unit) * 4);      /* 32px */
+  --spacing-2xl: calc(var(--spacing-unit) * 6);     /* 48px */
+  --spacing-3xl: calc(var(--spacing-unit) * 8);     /* 64px */
+
+  /* Shadows
+  ----------------------------------------*/
+  --shadow-sm: 0px 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0px 8px 16px rgba(0, 0, 0, 0.15);
+  --shadow-focus: 0 0 0 3px rgba(0, 102, 204, 0.25);
+
+  /* Transitions & Animations
+  ----------------------------------------*/
+  --transition-duration-fast: 150ms;
+  --transition-duration-base: 300ms;
+  --transition-duration-slow: 450ms;
+  --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Borders & Border Radius
+  ----------------------------------------*/
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --border-radius-full: 9999px;
+
+  --border-width-base: 1px;
+  --border-width-thick: 2px;
+
+  /* Breakpoints
+  ----------------------------------------*/
+  --breakpoint-sm: 576px;  /* Mobile landscape */
+  --breakpoint-md: 768px;  /* Tablet */
+  --breakpoint-lg: 992px;  /* Desktop */
+  --breakpoint-xl: 1200px; /* Large desktop */
+
+  /* Z-Index Scale
+  ----------------------------------------*/
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal: 1040;
+  --z-index-popover: 1050;
+  --z-index-tooltip: 1060;
+}
