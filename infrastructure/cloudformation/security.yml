@@ -1,0 +1,282 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Enhanced Security Infrastructure for HIPAA-Compliant Prior Authorization Management System
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - VpcId
+      - Label:
+          default: "Security Configuration"
+        Parameters:
+          - KmsDeletionWindow
+          - EnableCrossRegionReplication
+    ParameterLabels:
+      Environment:
+        default: "Deployment Environment"
+      VpcId:
+        default: "VPC ID"
+      KmsDeletionWindow:
+        default: "KMS Key Deletion Window"
+      EnableCrossRegionReplication:
+        default: "Enable Cross-Region Key Replication"
+
+Parameters:
+  Environment:
+    Description: Environment name (dev/staging/prod)
+    Type: String
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Default: dev
+
+  VpcId:
+    Description: ID of the VPC
+    Type: AWS::EC2::VPC::Id
+
+  KmsDeletionWindow:
+    Description: KMS key deletion window in days
+    Type: Number
+    Default: 30
+    MinValue: 7
+    MaxValue: 30
+
+  EnableCrossRegionReplication:
+    Description: Enable cross-region key replication
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'
+
+Resources:
+  # Security Groups
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enhanced security group for application containers
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-app-sg
+        - Key: HIPAA
+          Value: PHI-Enabled
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for application load balancer
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          DestinationSecurityGroupId: !Ref AppSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-alb-sg
+        - Key: HIPAA
+          Value: PHI-Enabled
+
+  # WAF Configuration
+  WebAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: !Sub ${Environment}-healthcare-waf
+      Description: Enhanced WAF rules for healthcare application protection
+      Scope: REGIONAL
+      DefaultAction:
+        Block: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub ${Environment}-waf-metrics
+      Rules:
+        - Name: AWSManagedRulesCommonRuleSet
+          Priority: 0
+          OverrideAction:
+            None: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesCommonRuleSetMetric
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+              ExcludedRules: []
+        
+        - Name: AWSManagedRulesKnownBadInputsRuleSet
+          Priority: 1
+          OverrideAction:
+            None: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesKnownBadInputsRuleSetMetric
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+              ExcludedRules: []
+
+        - Name: IPRateLimit
+          Priority: 2
+          Action:
+            Block: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: IPRateLimitMetric
+          Statement:
+            RateBasedStatement:
+              Limit: 2000
+              AggregateKeyType: IP
+
+  # KMS Configuration
+  KmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Enhanced KMS key for HIPAA-compliant data encryption
+      EnableKeyRotation: true
+      MultiRegion: !Ref EnableCrossRegionReplication
+      PendingWindowInDays: !Ref KmsDeletionWindow
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
+          - Sid: AllowCloudWatchLogs
+            Effect: Allow
+            Principal:
+              Service: logs.amazonaws.com
+            Action:
+              - kms:Encrypt*
+              - kms:Decrypt*
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:Describe*
+            Resource: '*'
+          - Sid: AllowECSService
+            Effect: Allow
+            Principal:
+              Service: ecs.amazonaws.com
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: '*'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: HIPAA
+          Value: Enabled
+
+  KmsAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${Environment}-pa-system
+      TargetKeyId: !Ref KmsKey
+
+  # GuardDuty Configuration
+  GuardDutyDetector:
+    Type: AWS::GuardDuty::Detector
+    Properties:
+      Enable: true
+      DataSources:
+        S3Logs:
+          Enable: true
+        Kubernetes:
+          AuditLogs:
+            Enable: true
+      FindingPublishingFrequency: FIFTEEN_MINUTES
+
+  # Security Hub Configuration
+  SecurityHub:
+    Type: AWS::SecurityHub::Hub
+    Properties:
+      EnableDefaultStandards: true
+      Tags:
+        Environment: !Ref Environment
+        HIPAA: Enabled
+
+  # CloudWatch Alarms for Security Monitoring
+  SecurityGroupChangesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alert on security group changes
+      MetricName: SecurityGroupEventCount
+      Namespace: CloudTrailMetrics
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref SecurityNotificationTopic
+      Dimensions:
+        - Name: SecurityGroupName
+          Value: !Ref AppSecurityGroup
+
+  SecurityNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${Environment}-security-notifications
+      KmsMasterKeyId: !Ref KmsKey
+
+Outputs:
+  AppSecurityGroupId:
+    Description: Security group ID for application containers
+    Value: !Ref AppSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-AppSecurityGroupId
+
+  LoadBalancerSecurityGroupId:
+    Description: Security group ID for load balancer
+    Value: !Ref LoadBalancerSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-LoadBalancerSecurityGroupId
+
+  KmsKeyArn:
+    Description: ARN of KMS key for HIPAA-compliant data encryption
+    Value: !GetAtt KmsKey.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-KmsKeyArn
+
+  WebAclId:
+    Description: ID of enhanced WAF web ACL
+    Value: !Ref WebAcl
+    Export:
+      Name: !Sub ${AWS::StackName}-WebAclId
+
+  SecurityNotificationTopicArn:
+    Description: ARN of security notification SNS topic
+    Value: !Ref SecurityNotificationTopic
+    Export:
+      Name: !Sub ${AWS::StackName}-SecurityNotificationTopicArn
